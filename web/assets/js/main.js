@@ -1,6 +1,19 @@
 (function () {
     'use strict';
 
+    var EN = document.documentElement.lang === 'en';
+    var T = EN ? {
+        pause: 'Pause', play: 'Play',
+        sent: 'Thank you! Your enquiry has been sent and we will get back to you shortly.',
+        failed: 'Your message was not sent. Please check the fields or call us on +385 32 550 399.',
+        offline: 'Your message cannot be sent right now. Please call us on +385 32 550 399 or email cezareja@cezareja.hr.'
+    } : {
+        pause: 'Pauza', play: 'Pokreni',
+        sent: 'Hvala! Vaš upit je poslan, javit ćemo vam se u najkraćem roku.',
+        failed: 'Poruka nije poslana. Provjerite polja ili nas nazovite na +385 32 550 399.',
+        offline: 'Poruku trenutno nije moguće poslati. Nazovite nas na +385 32 550 399 ili pišite na cezareja@cezareja.hr.'
+    };
+
     var header = document.querySelector('.site-header');
     var toggle = document.querySelector('.nav-toggle');
     var nav = document.getElementById('nav');
@@ -48,7 +61,7 @@
             vt.addEventListener('click', function () {
                 var paused = !video.paused;
                 if (paused) { video.pause(); } else { video.play(); }
-                vt.querySelector('span').textContent = paused ? 'Pokreni' : 'Pauza';
+                vt.querySelector('span').textContent = paused ? T.play : T.pause;
                 vt.querySelector('use').setAttribute('href', paused ? '#i-play' : '#i-pause');
             });
         }
@@ -105,8 +118,8 @@
         }
 
         var q = new URLSearchParams(location.search).get('poslano');
-        if (q === '1') { show(true, 'Hvala! Vaš upit je poslan, javit ćemo vam se u najkraćem roku.'); }
-        if (q === '0') { show(false, 'Poruka nije poslana. Provjerite polja ili nas nazovite na +385 32 550 399.'); }
+        if (q === '1') { show(true, T.sent); }
+        if (q === '0') { show(false, T.failed); }
 
         form.addEventListener('submit', function (e) {
             e.preventDefault();
@@ -119,7 +132,7 @@
                     if (res.ok) { form.reset(); if (t) { t.value = Date.now(); } }
                 })
                 .catch(function () {
-                    show(false, 'Poruku trenutno nije moguće poslati. Nazovite nas na +385 32 550 399 ili pišite na cezareja@cezareja.hr.');
+                    show(false, T.offline);
                 })
                 .then(function () { btn.disabled = false; });
         });

@@ -1,0 +1,76 @@
+<!-- Contact — Cezareja d.o.o. | Cezareja d.o.o., Skorotinci 8, 32252 Otok, Croatia. Phone +385 32 550 399, cezareja@cezareja.hr. Company details and branch contacts. | contact | | ../kontakt.html -->
+<section class="page-hero">
+  <img src="../assets/img/poslovnica-zgrada.jpg" alt="">
+  <div class="wrap">
+    <nav class="crumbs" aria-label="Breadcrumb"><a href="index.html">Home</a><span>›</span>Contact</nav>
+    <span class="eyebrow">Contact</span>
+    <h1>We're here for your questions and partnership</h1>
+    <p class="lead">Send us an enquiry or contact our head office or your nearest branch directly.</p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="wrap split" style="align-items:start">
+    <div class="panel reveal" id="upit">
+      <span class="eyebrow">Send an enquiry</span>
+      <h2 style="font-size:1.8rem">How can we help?</h2>
+      <form class="form" action="../send.php" method="post" data-ajax novalidate>
+        <div class="hp" aria-hidden="true"><label for="f-web">Leave empty</label><input id="f-web" name="web" tabindex="-1" autocomplete="off"></div>
+        <input type="hidden" name="t" value="">
+        <input type="hidden" name="lang" value="en">
+        <div><label for="f-ime">Full name <span class="req">*</span></label><input id="f-ime" name="ime" autocomplete="name" required></div>
+        <div><label for="f-tvrtka">Company / farm</label><input id="f-tvrtka" name="tvrtka" autocomplete="organization"></div>
+        <div><label for="f-email">Email <span class="req">*</span></label><input id="f-email" name="email" type="email" autocomplete="email" required></div>
+        <div><label for="f-tel">Phone</label><input id="f-tel" name="telefon" type="tel" autocomplete="tel"></div>
+        <fieldset class="full" style="border:0;padding:0;margin:0">
+          <legend style="font:600 .88rem var(--font-head);margin-bottom:6px">Type of enquiry <span class="req">*</span></legend>
+          <div class="types">
+            <input type="radio" name="vrsta" id="t-otkup" value="Otkup" checked><label for="t-otkup"><svg class="i"><use href="#i-wheat"/></svg>Grain purchase<small>grain and oilseeds</small></label>
+            <input type="radio" name="vrsta" id="t-repro" value="Repromaterijal"><label for="t-repro"><svg class="i"><use href="#i-sprout"/></svg>Farm inputs<small>seed, fertiliser, crop protection</small></label>
+            <input type="radio" name="vrsta" id="t-ostalo" value="Ostalo"><label for="t-ostalo"><svg class="i"><use href="#i-handshake"/></svg>Other<small>partnership and general</small></label>
+          </div>
+        </fieldset>
+        <div class="full"><label for="f-poruka">Message <span class="req">*</span></label><textarea id="f-poruka" name="poruka" required></textarea></div>
+        <label class="consent full"><input type="checkbox" name="privola" required> I agree that Cezareja d.o.o. may use my details to reply to this enquiry.</label>
+        <div class="full"><button class="btn btn-dark" type="submit">Send enquiry <svg class="i"><use href="#i-arrow"/></svg></button></div>
+        <p class="form-msg full" role="status" aria-live="polite"></p>
+      </form>
+    </div>
+
+    <div class="reveal">
+      <span class="eyebrow">Head office</span>
+      <h2 style="font-size:1.8rem">Cezareja d.o.o.</h2>
+      <div class="grid" style="gap:14px;margin-bottom:28px">
+        <div class="info-card"><span class="feature-ico"><svg class="i"><use href="#i-phone"/></svg></span><div><small>Phone</small><strong><a href="tel:+38532550399">+385 32 550 399</a></strong></div></div>
+        <div class="info-card"><span class="feature-ico"><svg class="i"><use href="#i-mail"/></svg></span><div><small>Email</small><strong><a href="mailto:cezareja@cezareja.hr">cezareja@cezareja.hr</a></strong></div></div>
+        <div class="info-card"><span class="feature-ico"><svg class="i"><use href="#i-pin"/></svg></span><div><small>Address</small><strong>Skorotinci 8, 32252 Otok, Croatia</strong></div></div>
+      </div>
+
+      <h3>Company details</h3>
+      <table class="data-table">
+        <tr><th>Company name</th><td>CEZAREJA d.o.o.</td></tr>
+        <tr><th>Managing director</th><td>Misla Varzić</td></tr>
+        <tr><th>OIB (company ID)</th><td>44343542645</td></tr>
+        <tr><th>VAT ID</th><td>HR44343542645</td></tr>
+        <tr><th>Registration</th><td>MBS 030053959, Commercial Court in Osijek</td></tr>
+        <tr><th>Share capital</th><td>EUR 3,318,050.00, paid in full</td></tr>
+        <tr><th>Fax</th><td>+385 32 550 402</td></tr>
+        <tr><th>Agram banka</th><td>HR1324810001136000629<br>SWIFT: KREZHR2X</td></tr>
+        <tr><th>Erste&nbsp;&amp;&nbsp;Steiermärkische Bank</th><td>HR8524020061100651872<br>SWIFT: ESBCHR22</td></tr>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section class="section-sm bg-cream">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div><span class="eyebrow">Visit us</span><h2>Skorotinci 8, Otok</h2></div>
+      <p>For grain purchase and farm inputs, the fastest answer comes from the manager at your nearest branch. <a href="branches.html">List of branches →</a></p>
+    </div>
+    <div class="map reveal">
+      <iframe title="Map: Cezareja d.o.o., Skorotinci 8, Otok" loading="lazy" referrerpolicy="no-referrer-when-downgrade"
+        src="https://maps.google.com/maps?q=Skorotinci%208%2C%2032252%20Otok&z=15&hl=en&output=embed"></iframe>
+    </div>
+  </div>
+</section>

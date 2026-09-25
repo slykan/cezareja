@@ -141,7 +141,21 @@ p { margin: 0 0 1em; }
     height: 2px; background: var(--green); border-radius: 2px;
 }
 
-.header-cta { flex: none; }
+.header-cta { flex: none; order: 3; }
+.nav { order: 1; }
+.nav-toggle { order: 4; }
+
+/* Jezik: HR | EN */
+.lang { order: 2; display: flex; flex: none; border: 1px solid var(--line); border-radius: 999px; padding: 3px; }
+.lang a {
+    font: 700 .78rem/1 var(--font-head); letter-spacing: .04em;
+    padding: 7px 10px; border-radius: 999px; color: var(--muted);
+}
+.lang a:hover { text-decoration: none; color: var(--ink); }
+.lang a[aria-current] { background: var(--dark); color: #fff; }
+.home .site-header:not(.is-solid) .lang { border-color: rgba(255,255,255,.4); }
+.home .site-header:not(.is-solid) .lang a { color: rgba(255,255,255,.85); }
+.home .site-header:not(.is-solid) .lang a[aria-current] { background: #fff; color: var(--ink); }
 
 .nav-toggle {
     display: none; margin-left: auto;
@@ -455,14 +469,27 @@ a.card:hover .card-img img { transform: scale(1.04); }
 
 /* ------------------------------------------------------------ mobitel */
 
-@media (max-width: 1100px) {
-    .nav a { padding: 10px 8px; font-size: .88rem; }
+/* Zaglavlje: logo + 7 stavki + HR|EN + gumb ne stanu u 1200 px, pa je
+   zaglavlje sire od sadrzaja, a gumb se skriva cim ponestane mjesta
+   ("Kontakt" je ionako u izborniku). */
+.site-header .wrap { width: min(1360px, 100% - 2 * var(--gutter)); }
+
+@media (max-width: 1440px) {
     .header-cta { display: none; }
 }
 
-@media (max-width: 960px) {
-    :root { --header-h: 72px; }
-    .nav-toggle { display: block; }
+@media (max-width: 1200px) {
+    .site-header .wrap { gap: 16px; }
+    .brand img { height: 36px; }
+    .nav a { padding: 10px 7px; font-size: .86rem; }
+}
+
+@media (max-width: 1060px) {
+    .nav-toggle { display: block; margin-left: 4px; }
+    .lang { margin-left: auto; }
+    .home .site-header.menu-open .lang { border-color: var(--line); }
+    .home .site-header.menu-open .lang a { color: var(--muted); }
+    .home .site-header.menu-open .lang a[aria-current] { background: var(--dark); color: #fff; }
     .nav {
         position: fixed; inset: var(--header-h) 0 auto; background: #fff;
         box-shadow: var(--shadow-lg); padding: 12px var(--gutter) 24px;
@@ -477,7 +504,10 @@ a.card:hover .card-img img { transform: scale(1.04); }
     .home .site-header.menu-open .logo-dark { display: block; }
     .home .site-header.menu-open .logo-light { display: none; }
     .home .site-header.menu-open .nav-toggle { color: var(--ink); }
+}
 
+@media (max-width: 960px) {
+    :root { --header-h: 72px; }
     .g-4 { grid-template-columns: repeat(2, 1fr); }
     .g-3 { grid-template-columns: repeat(2, 1fr); }
     .split, .band, .section-head { grid-template-columns: 1fr; gap: 36px; }

@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{TITLE}}</title>
+<meta name="description" content="{{DESC}}">
+<meta property="og:title" content="{{TITLE}}">
+<meta property="og:description" content="{{DESC}}">
+<meta property="og:image" content="../assets/img/hero-poster.jpg">
+<meta name="theme-color" content="#2b2d2a">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Montserrat:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/style.css">
+<link rel="icon" href="../assets/img/favicon.ico">
+<link rel="alternate" hreflang="hr" href="{{ALT}}">
+<link rel="alternate" hreflang="en" href="{{SELF}}">
+</head>
+<body class="{{BODYCLASS}}">
+{{ICONS}}
+<a class="skip" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="index.html" aria-label="Cezareja d.o.o. — home">
+      <img class="logo-dark" src="../assets/img/logo.png" alt="Cezareja group" width="350" height="60">
+      <img class="logo-light" src="../assets/img/logo-light.png" alt="" width="350" height="60">
+    </a>
+    <div class="lang" aria-label="Language"><a href="{{ALT}}" hreflang="hr" lang="hr">HR</a><a href="{{SELF}}" aria-current="true" hreflang="en">EN</a></div>
+    <button class="nav-toggle" aria-controls="nav" aria-expanded="false" aria-label="Menu"><svg class="i"><use href="#i-menu"/></svg></button>
+    <nav class="nav" id="nav" aria-label="Main menu">
+      <ul>
+        <li><a href="index.html"{{CUR:index}}>Home</a></li>
+        <li><a href="about.html"{{CUR:about}}>About us</a></li>
+        <li><a href="activities.html"{{CUR:activities}}>Activities</a></li>
+        <li><a href="grain-purchase.html"{{CUR:grain-purchase}}>Grain purchase</a></li>
+        <li><a href="farm-inputs.html"{{CUR:farm-inputs}}>Farm inputs</a></li>
+        <li><a href="branches.html"{{CUR:branches}}>Branches</a></li>
+        <li><a href="contact.html"{{CUR:contact}}>Contact</a></li>
+      </ul>
+    </nav>
+    <a class="btn btn-primary header-cta" href="contact.html"><svg class="i"><use href="#i-phone"/></svg>Contact us</a>
+  </div>
+</header>
+<main id="main">

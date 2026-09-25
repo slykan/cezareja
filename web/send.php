@@ -38,17 +38,58 @@ date_default_timezone_set('Europe/Zagreb');
 header('X-Content-Type-Options: nosniff');
 
 $wantsJson = isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false;
+$lang = (isset($_POST['lang']) && $_POST['lang'] === 'en') ? 'en' : 'hr';
+
+// Poruke posjetitelju na jeziku stranice s koje je poslao obrazac.
+$MESSAGES = array(
+    'hr' => array(
+        'bad_request' => 'Neispravan zahtjev.',
+        'unavailable' => 'Obrazac trenutno nije dostupan. Nazovite nas na +385 32 550 399 ili pišite na cezareja@cezareja.hr.',
+        'sent'        => 'Hvala! Vaš upit je poslan, javit ćemo vam se u najkraćem roku.',
+        'sent_short'  => 'Hvala! Vaš upit je poslan.',
+        'too_fast'    => 'Poruka je poslana prebrzo. Pokušajte ponovno.',
+        'too_many'    => 'Poslali ste previše poruka. Pokušajte ponovno za sat vremena ili nas nazovite.',
+        'failed'      => 'Poruku trenutno nije moguće poslati. Nazovite nas na +385 32 550 399 ili pišite na cezareja@cezareja.hr.',
+        'please'      => 'Molimo',
+        'err_name'    => 'upišite ime i prezime',
+        'err_email'   => 'upišite ispravnu e-mail adresu',
+        'err_message' => 'upišite poruku',
+        'err_consent' => 'potvrdite privolu za obradu podataka',
+    ),
+    'en' => array(
+        'bad_request' => 'Invalid request.',
+        'unavailable' => 'The form is currently unavailable. Please call us on +385 32 550 399 or email cezareja@cezareja.hr.',
+        'sent'        => 'Thank you! Your enquiry has been sent and we will get back to you shortly.',
+        'sent_short'  => 'Thank you! Your enquiry has been sent.',
+        'too_fast'    => 'The form was sent too quickly. Please try again.',
+        'too_many'    => 'You have sent too many messages. Please try again in an hour or give us a call.',
+        'failed'      => 'Your message cannot be sent right now. Please call us on +385 32 550 399 or email cezareja@cezareja.hr.',
+        'please'      => 'Please',
+        'err_name'    => 'enter your full name',
+        'err_email'   => 'enter a valid email address',
+        'err_message' => 'enter a message',
+        'err_consent' => 'confirm your consent to the processing of your data',
+    ),
+);
+
+function t($key)
+{
+    global $MESSAGES, $lang;
+
+    return $MESSAGES[$lang][$key];
+}
 
 function respond($ok, $message, $status = 200)
 {
-    global $wantsJson;
+    global $wantsJson, $lang;
 
     if ($wantsJson) {
         http_response_code($status);
         header('Content-Type: application/json; charset=utf-8');
         echo json_encode(array('ok' => (bool) $ok, 'message' => $message), JSON_UNESCAPED_UNICODE);
     } else {
-        header('Location: kontakt.html?poslano=' . ($ok ? '1' : '0') . '#upit', true, 303);
+        $page = $lang === 'en' ? 'en/contact.html' : 'kontakt.html';
+        header('Location: ' . $page . '?poslano=' . ($ok ? '1' : '0') . '#upit', true, 303);
     }
     exit;
 }
@@ -183,24 +224,24 @@ function smtpSend(array $c, $to, $message)
 // ------------------------------------------------------------- OBRADA
 
 if (!isset($_SERVER['REQUEST_METHOD']) || $_SERVER['REQUEST_METHOD'] !== 'POST') {
-    respond(false, 'Neispravan zahtjev.', 405);
+    respond(false, t('bad_request'), 405);
 }
 
 $configFile = __DIR__ . '/mail-config.php';
 $config = is_file($configFile) ? include $configFile : null;
 if (!is_array($config) || empty($config['host']) || empty($config['to'])) {
     error_log('Cezareja obrazac: nedostaje ili je neispravan ' . $configFile);
-    respond(false, 'Obrazac trenutno nije dostupan. Nazovite nas na +385 32 550 399 ili pišite na cezareja@cezareja.hr.', 500);
+    respond(false, t('unavailable'), 500);
 }
 
 // Zamka za robote: polje koje covjek ne vidi mora ostati prazno.
 if (field('web', 200) !== '') {
-    respond(true, 'Hvala! Vaš upit je poslan.');
+    respond(true, t('sent_short'));
 }
 
 $started = (int) field('t', 20);
 if ($started > 0 && (time() - (int) floor($started / 1000)) < MIN_SECONDS) {
-    respond(false, 'Poruka je poslana prebrzo. Pokušajte ponovno.', 429);
+    respond(false, t('too_fast'), 429);
 }
 
 $ime     = oneLine(field('ime', 120));
@@ -213,22 +254,22 @@ $privola = isset($_POST['privola']);
 
 $errors = array();
 if ($ime === '') {
-    $errors[] = 'upišite ime i prezime';
+    $errors[] = t('err_name');
 }
 if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-    $errors[] = 'upišite ispravnu e-mail adresu';
+    $errors[] = t('err_email');
 }
 if (!array_key_exists($vrsta, $TO_BY_TYPE)) {
     $vrsta = 'Ostalo';
 }
 if (textLength($poruka) < 5) {
-    $errors[] = 'upišite poruku';
+    $errors[] = t('err_message');
 }
 if (!$privola) {
-    $errors[] = 'potvrdite privolu za obradu podataka';
+    $errors[] = t('err_consent');
 }
 if ($errors) {
-    respond(false, 'Molimo ' . implode(', ', $errors) . '.', 422);
+    respond(false, t('please') . ' ' . implode(', ', $errors) . '.', 422);
 }
 
 // Ogranicenje po IP adresi (datoteka u privremenoj mapi posluzitelja).
@@ -246,7 +287,7 @@ if (is_file($rateFile)) {
     }
 }
 if (count($hits) >= MAX_PER_HOUR) {
-    respond(false, 'Poslali ste previše poruka. Pokušajte ponovno za sat vremena ili nas nazovite.', 429);
+    respond(false, t('too_many'), 429);
 }
 $hits[] = time();
 @file_put_contents($rateFile, implode(',', $hits), LOCK_EX);
@@ -258,6 +299,7 @@ $subject = 'Upit s weba: ' . $vrsta . ' — ' . $ime;
 $body = "Novi upit s obrasca na cezareja.hr\n"
     . str_repeat('-', 40) . "\n"
     . 'Vrsta upita:   ' . $vrsta . "\n"
+    . 'Jezik stranice: ' . strtoupper($lang) . "\n"
     . 'Ime i prezime: ' . $ime . "\n"
     . 'Tvrtka / OPG:  ' . ($tvrtka !== '' ? $tvrtka : '-') . "\n"
     . 'E-mail:        ' . $email . "\n"
@@ -294,7 +336,7 @@ if (TEST_MODE) {
 }
 
 if (!$sent) {
-    respond(false, 'Poruku trenutno nije moguće poslati. Nazovite nas na +385 32 550 399 ili pišite na cezareja@cezareja.hr.', 500);
+    respond(false, t('failed'), 500);
 }
 
-respond(true, 'Hvala! Vaš upit je poslan, javit ćemo vam se u najkraćem roku.');
+respond(true, t('sent'));
