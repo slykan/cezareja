@@ -145,17 +145,18 @@ p { margin: 0 0 1em; }
 .nav { order: 1; }
 .nav-toggle { order: 4; }
 
-/* Jezik: HR | EN */
-.lang { order: 2; display: flex; flex: none; border: 1px solid var(--line); border-radius: 999px; padding: 3px; }
+/* Jezik: okrugle zastavice. Aktivni jezik ima zeleni prsten, drugi je blijed. */
+.lang { order: 2; display: flex; flex: none; gap: 6px; align-items: center; }
 .lang a {
-    font: 700 .78rem/1 var(--font-head); letter-spacing: .04em;
-    padding: 7px 10px; border-radius: 999px; color: var(--muted);
+    display: grid; place-items: center;
+    width: 34px; height: 34px; border-radius: 50%;
+    border: 2px solid transparent;
+    opacity: .55; filter: saturate(.6);
+    transition: opacity .2s, filter .2s, border-color .2s;
 }
-.lang a:hover { text-decoration: none; color: var(--ink); }
-.lang a[aria-current] { background: var(--dark); color: #fff; }
-.home .site-header:not(.is-solid) .lang { border-color: rgba(255,255,255,.4); }
-.home .site-header:not(.is-solid) .lang a { color: rgba(255,255,255,.85); }
-.home .site-header:not(.is-solid) .lang a[aria-current] { background: #fff; color: var(--ink); }
+.lang a:hover, .lang a:focus-visible { opacity: 1; filter: none; }
+.lang a[aria-current] { opacity: 1; filter: none; border-color: var(--green); }
+.flag { width: 26px; height: 26px; border-radius: 50%; display: block; box-shadow: 0 0 0 1px rgba(0,0,0,.12); }
 
 .nav-toggle {
     display: none; margin-left: auto;
@@ -487,9 +488,6 @@ a.card:hover .card-img img { transform: scale(1.04); }
 @media (max-width: 1060px) {
     .nav-toggle { display: block; margin-left: 4px; }
     .lang { margin-left: auto; }
-    .home .site-header.menu-open .lang { border-color: var(--line); }
-    .home .site-header.menu-open .lang a { color: var(--muted); }
-    .home .site-header.menu-open .lang a[aria-current] { background: var(--dark); color: #fff; }
     .nav {
         position: fixed; inset: var(--header-h) 0 auto; background: #fff;
         box-shadow: var(--shadow-lg); padding: 12px var(--gutter) 24px;
