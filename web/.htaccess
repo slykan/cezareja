@@ -3,4 +3,5 @@
     Require all denied
 </FilesMatch>
 
-RedirectMatch 404 ^/src/
+# Izvorni dijelovi stranica (src/) — radi i kad je site u podmapi (npr. /new/).
+RedirectMatch 404 /src/

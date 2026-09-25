@@ -6,31 +6,31 @@
  * (postavke i lozinka u mail-config.php). Odgovara JSON-om (kad salje
  * JavaScript) ili preusmjerava natrag na kontakt.html (bez JavaScripta).
  *
+ * Radi na PHP 5.6 i novijem — posluzitelj starog sitea moze imati stari PHP.
+ *
  * SPF domene cezareja.hr vec dopusta VPS (185.213.27.139), pa poruke s
  * web@cezareja.hr prolaze Googleov filtar.
  */
 
 // ------------------------------------------------------------- POSTAVKE
 
-$config = require __DIR__ . '/mail-config.php';
-
 // Kamo ide koja vrsta upita. Prazno = adresa 'to' iz mail-config.php.
-const TO_BY_TYPE = [
+$TO_BY_TYPE = array(
     'Otkup'          => '',
     'Repromaterijal' => '',
     'Ostalo'         => '',
-];
+);
 
-const FROM_NAME = 'Cezareja web';
+define('FROM_NAME', 'Cezareja web');
 
 // Najmanje sekundi od otvaranja stranice do slanja — robot salje odmah.
-const MIN_SECONDS = 3;
+define('MIN_SECONDS', 3);
 
 // Najvise poruka s iste IP adrese u jednom satu.
-const MAX_PER_HOUR = 5;
+define('MAX_PER_HOUR', 5);
 
 // true = ne salje e-mail nego zapisuje poruku u mail-test.log (za probu).
-const TEST_MODE = false;
+define('TEST_MODE', false);
 
 // ----------------------------------------------------------------------
 
@@ -39,32 +39,77 @@ header('X-Content-Type-Options: nosniff');
 
 $wantsJson = isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false;
 
-function respond(bool $ok, string $message, int $status = 200): void
+function respond($ok, $message, $status = 200)
 {
     global $wantsJson;
 
     if ($wantsJson) {
         http_response_code($status);
         header('Content-Type: application/json; charset=utf-8');
-        echo json_encode(['ok' => $ok, 'message' => $message], JSON_UNESCAPED_UNICODE);
+        echo json_encode(array('ok' => (bool) $ok, 'message' => $message), JSON_UNESCAPED_UNICODE);
     } else {
         header('Location: kontakt.html?poslano=' . ($ok ? '1' : '0') . '#upit', true, 303);
     }
     exit;
 }
 
-function field(string $name, int $max): string
+function cut($value, $max)
+{
+    return function_exists('mb_substr') ? mb_substr($value, 0, $max, 'UTF-8') : substr($value, 0, $max);
+}
+
+function textLength($value)
+{
+    return function_exists('mb_strlen') ? mb_strlen($value, 'UTF-8') : strlen($value);
+}
+
+function field($name, $max)
 {
     $value = isset($_POST[$name]) ? trim((string) $_POST[$name]) : '';
     // Bez kontrolnih znakova; poruka smije imati novi red.
-    $value = preg_replace('/[^\P{C}\n\t]/u', '', $value) ?? '';
+    $clean = preg_replace('/[^\P{C}\n\t]/u', '', $value);
 
-    return mb_substr($value, 0, $max);
+    return cut($clean === null ? '' : $clean, $max);
 }
 
-function encodeName(string $name): string
+function oneLine($value)
+{
+    // Zastita od ubacivanja zaglavlja: u zaglavlja ide samo jedan redak.
+    return trim(str_replace(array("\r", "\n"), ' ', $value));
+}
+
+function encodeName($name)
 {
     return '=?UTF-8?B?' . base64_encode($name) . '?=';
+}
+
+/**
+ * Jedan redak odgovora SMTP posluzitelja (visered odgovori spojeni).
+ */
+function smtpRead($fp)
+{
+    $data = '';
+    while (($line = fgets($fp, 515)) !== false) {
+        $data .= $line;
+        if (strlen($line) < 4 || $line[3] === ' ') {
+            break;
+        }
+    }
+
+    return $data;
+}
+
+/**
+ * @return string|null null = ocekivani odgovor, inace odgovor posluzitelja
+ */
+function smtpCmd($fp, $line, $expect)
+{
+    if ($line !== null) {
+        fwrite($fp, $line . "\r\n");
+    }
+    $reply = smtpRead($fp);
+
+    return (int) substr($reply, 0, 3) === $expect ? null : trim($reply);
 }
 
 /**
@@ -72,93 +117,80 @@ function encodeName(string $name): string
  *
  * @return string|null null = poslano, inace opis greske
  */
-function smtpSend(array $c, string $to, string $message): ?string
+function smtpSend(array $c, $to, $message)
 {
     $ssl = (int) $c['port'] === 465;
-    $verify = $c['verify_ssl'] ?? true;
-    $ctx = stream_context_create(['ssl' => [
+    $verify = isset($c['verify_ssl']) ? (bool) $c['verify_ssl'] : true;
+    $ctx = stream_context_create(array('ssl' => array(
         'peer_name' => $c['host'],
         'verify_peer' => $verify,
         'verify_peer_name' => $verify,
         'allow_self_signed' => !$verify,
-    ]]);
+    )));
     $fp = @stream_socket_client(($ssl ? 'ssl://' : 'tcp://') . $c['host'] . ':' . $c['port'], $errno, $errstr, 15, STREAM_CLIENT_CONNECT, $ctx);
     if (!$fp) {
-        return "spajanje: {$errstr} ({$errno})";
+        return 'spajanje: ' . $errstr . ' (' . $errno . ')';
     }
     stream_set_timeout($fp, 15);
 
-    $read = function () use ($fp): string {
-        $data = '';
-        while (($line = fgets($fp, 515)) !== false) {
-            $data .= $line;
-            if (strlen($line) < 4 || $line[3] === ' ') {
-                break;
-            }
-        }
-        return $data;
-    };
-    $cmd = function (?string $line, int $expect) use ($fp, $read): ?string {
-        if ($line !== null) {
-            fwrite($fp, $line . "\r\n");
-        }
-        $reply = $read();
-        return (int) substr($reply, 0, 3) === $expect ? null : trim($reply);
-    };
-
-    $steps = [[null, 220], ['EHLO cezareja.hr', 250]];
-    foreach ($steps as [$line, $code]) {
-        if ($err = $cmd($line, $code)) {
+    $steps = array(array(null, 220), array('EHLO cezareja.hr', 250));
+    if (!$ssl) {
+        $steps[] = array('STARTTLS', 220);
+    }
+    foreach ($steps as $step) {
+        $err = smtpCmd($fp, $step[0], $step[1]);
+        if ($err !== null) {
             fclose($fp);
             return $err;
         }
     }
 
     if (!$ssl) {
-        if ($err = $cmd('STARTTLS', 220)) {
-            fclose($fp);
-            return $err;
-        }
         stream_socket_enable_crypto($fp, true, STREAM_CRYPTO_METHOD_TLS_CLIENT);
-        if ($err = $cmd('EHLO cezareja.hr', 250)) {
+        $err = smtpCmd($fp, 'EHLO cezareja.hr', 250);
+        if ($err !== null) {
             fclose($fp);
             return $err;
         }
     }
 
-    // Tocka na pocetku retka udvostrucuje se (RFC 5321); base64 tijelo je nema, zaglavlja mogu.
+    // Tocka na pocetku retka udvostrucuje se (RFC 5321).
     $data = preg_replace('/^\./m', '..', $message);
 
-    $steps = [
-        ['AUTH LOGIN', 334],
-        [base64_encode($c['username']), 334],
-        [base64_encode($c['password']), 235],
-        ['MAIL FROM:<' . $c['from'] . '>', 250],
-        ['RCPT TO:<' . $to . '>', 250],
-        ['DATA', 354],
-        [$data . "\r\n.", 250],
-    ];
-    foreach ($steps as [$line, $code]) {
-        if ($err = $cmd($line, $code)) {
+    $steps = array(
+        array('AUTH LOGIN', 334),
+        array(base64_encode($c['username']), 334),
+        array(base64_encode($c['password']), 235),
+        array('MAIL FROM:<' . $c['from'] . '>', 250),
+        array('RCPT TO:<' . $to . '>', 250),
+        array('DATA', 354),
+        array($data . "\r\n.", 250),
+    );
+    foreach ($steps as $i => $step) {
+        $err = smtpCmd($fp, $step[0], $step[1]);
+        if ($err !== null) {
             fclose($fp);
-            return $err;
+            return ($i <= 2 ? 'prijava: ' : '') . $err;
         }
     }
 
-    $cmd('QUIT', 221);
+    smtpCmd($fp, 'QUIT', 221);
     fclose($fp);
 
     return null;
 }
 
-function oneLine(string $value): string
-{
-    // Zastita od ubacivanja zaglavlja: u zaglavlja ide samo jedan redak.
-    return trim(str_replace(["\r", "\n"], ' ', $value));
+// ------------------------------------------------------------- OBRADA
+
+if (!isset($_SERVER['REQUEST_METHOD']) || $_SERVER['REQUEST_METHOD'] !== 'POST') {
+    respond(false, 'Neispravan zahtjev.', 405);
 }
 
-if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
-    respond(false, 'Neispravan zahtjev.', 405);
+$configFile = __DIR__ . '/mail-config.php';
+$config = is_file($configFile) ? include $configFile : null;
+if (!is_array($config) || empty($config['host']) || empty($config['to'])) {
+    error_log('Cezareja obrazac: nedostaje ili je neispravan ' . $configFile);
+    respond(false, 'Obrazac trenutno nije dostupan. Nazovite nas na +385 32 550 399 ili pišite na cezareja@cezareja.hr.', 500);
 }
 
 // Zamka za robote: polje koje covjek ne vidi mora ostati prazno.
@@ -167,7 +199,7 @@ if (field('web', 200) !== '') {
 }
 
 $started = (int) field('t', 20);
-if ($started > 0 && (time() - intdiv($started, 1000)) < MIN_SECONDS) {
+if ($started > 0 && (time() - (int) floor($started / 1000)) < MIN_SECONDS) {
     respond(false, 'Poruka je poslana prebrzo. Pokušajte ponovno.', 429);
 }
 
@@ -179,17 +211,17 @@ $vrsta   = oneLine(field('vrsta', 40));
 $poruka  = field('poruka', 5000);
 $privola = isset($_POST['privola']);
 
-$errors = [];
+$errors = array();
 if ($ime === '') {
     $errors[] = 'upišite ime i prezime';
 }
 if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
     $errors[] = 'upišite ispravnu e-mail adresu';
 }
-if (!array_key_exists($vrsta, TO_BY_TYPE)) {
+if (!array_key_exists($vrsta, $TO_BY_TYPE)) {
     $vrsta = 'Ostalo';
 }
-if (mb_strlen($poruka) < 5) {
+if (textLength($poruka) < 5) {
     $errors[] = 'upišite poruku';
 }
 if (!$privola) {
@@ -200,14 +232,18 @@ if ($errors) {
 }
 
 // Ogranicenje po IP adresi (datoteka u privremenoj mapi posluzitelja).
-$ip = $_SERVER['REMOTE_ADDR'] ?? 'nepoznato';
+$ip = isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : 'nepoznato';
+if (!empty($_SERVER['HTTP_CF_CONNECTING_IP'])) {
+    $ip = $_SERVER['HTTP_CF_CONNECTING_IP']; // site je iza Cloudflarea
+}
 $rateFile = sys_get_temp_dir() . '/cezareja-form-' . md5($ip);
-$hits = [];
+$hits = array();
 if (is_file($rateFile)) {
-    $hits = array_filter(
-        array_map('intval', explode(',', (string) file_get_contents($rateFile))),
-        fn ($t) => $t > time() - 3600
-    );
+    foreach (explode(',', (string) file_get_contents($rateFile)) as $t) {
+        if ((int) $t > time() - 3600) {
+            $hits[] = (int) $t;
+        }
+    }
 }
 if (count($hits) >= MAX_PER_HOUR) {
     respond(false, 'Poslali ste previše poruka. Pokušajte ponovno za sat vremena ili nas nazovite.', 429);
@@ -216,39 +252,39 @@ $hits[] = time();
 @file_put_contents($rateFile, implode(',', $hits), LOCK_EX);
 
 // Poruka
-$to = TO_BY_TYPE[$vrsta] ?: $config['to'];
+$to = $TO_BY_TYPE[$vrsta] !== '' ? $TO_BY_TYPE[$vrsta] : $config['to'];
 $subject = 'Upit s weba: ' . $vrsta . ' — ' . $ime;
 
 $body = "Novi upit s obrasca na cezareja.hr\n"
     . str_repeat('-', 40) . "\n"
-    . "Vrsta upita:   {$vrsta}\n"
-    . "Ime i prezime: {$ime}\n"
+    . 'Vrsta upita:   ' . $vrsta . "\n"
+    . 'Ime i prezime: ' . $ime . "\n"
     . 'Tvrtka / OPG:  ' . ($tvrtka !== '' ? $tvrtka : '-') . "\n"
-    . "E-mail:        {$email}\n"
+    . 'E-mail:        ' . $email . "\n"
     . 'Telefon:       ' . ($telefon !== '' ? $telefon : '-') . "\n"
     . str_repeat('-', 40) . "\n\n"
     . $poruka . "\n\n"
     . str_repeat('-', 40) . "\n"
-    . 'Poslano: ' . date('d.m.Y. H:i') . ", IP: {$ip}\n"
+    . 'Poslano: ' . date('d.m.Y. H:i') . ', IP: ' . $ip . "\n"
     . "Korisnik je potvrdio privolu za obradu podataka radi odgovora na upit.\n";
 
-$message = implode("\r\n", [
+$message = implode("\r\n", array(
     'Date: ' . date('r'),
     'From: ' . encodeName(FROM_NAME) . ' <' . $config['from'] . '>',
     'To: <' . $to . '>',
     'Reply-To: ' . encodeName($ime) . ' <' . $email . '>',
     'Subject: =?UTF-8?B?' . base64_encode($subject) . '?=',
-    'Message-ID: <' . bin2hex(random_bytes(12)) . '@cezareja.hr>',
+    'Message-ID: <' . md5(uniqid(mt_rand(), true)) . '@cezareja.hr>',
     'MIME-Version: 1.0',
     'Content-Type: text/plain; charset=UTF-8',
     'Content-Transfer-Encoding: base64',
     'X-Mailer: Cezareja web',
     '',
     rtrim(chunk_split(base64_encode($body), 76, "\r\n")),
-]);
+));
 
 if (TEST_MODE) {
-    $sent = (bool) file_put_contents(__DIR__ . '/mail-test.log', "TO: {$to}\n{$subject}\n{$body}\n\n", FILE_APPEND | LOCK_EX);
+    $sent = (bool) file_put_contents(__DIR__ . '/mail-test.log', 'TO: ' . $to . "\n" . $subject . "\n" . $body . "\n\n", FILE_APPEND | LOCK_EX);
 } else {
     $error = smtpSend($config, $to, $message);
     $sent = $error === null;
