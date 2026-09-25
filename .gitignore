@@ -1,0 +1,11 @@
+# Originali (4K video 660 MB, dron fotke) — prevelike za git, cuvaju se lokalno
+_izvorno/
+
+# Lozinka za SMTP — samo na posluzitelju
+web/mail-config.php
+web/mail-test.log
+
+*.tmp.*
+Thumbs.db
+desktop.ini
+.DS_Store

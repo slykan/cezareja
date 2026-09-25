@@ -1,0 +1,6 @@
+# Postavke i log obrasca nisu za preglednik.
+<FilesMatch "^(mail-config\.php|mail-test\.log|build\.ps1)$">
+    Require all denied
+</FilesMatch>
+
+RedirectMatch 404 ^/src/
